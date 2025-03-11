@@ -7,9 +7,10 @@ import java.util.SortedMap;
 import edu.kit.kastel.mcse.ardoco.core.api.models.ArchitectureModelType;
 import edu.kit.kastel.mcse.ardoco.core.common.util.CommonUtilities;
 import edu.kit.kastel.mcse.ardoco.core.common.util.DataRepositoryHelper;
-import edu.kit.kastel.mcse.ardoco.tlr.connectiongenerator.ConnectionGenerator;
 import edu.kit.kastel.mcse.ardoco.core.execution.runner.ArDoCoRunner;
+import edu.kit.kastel.mcse.ardoco.tlr.connectiongenerator.ConnectionGenerator;
 import edu.kit.kastel.mcse.ardoco.tlr.models.agents.ArCoTLModelProviderAgent;
+import edu.kit.kastel.mcse.ardoco.tlr.models.agents.ArchitectureConfiguration;
 import edu.kit.kastel.mcse.ardoco.tlr.recommendationgenerator.RecommendationGenerator;
 import edu.kit.kastel.mcse.ardoco.tlr.text.providers.TextPreprocessingAgent;
 import edu.kit.kastel.mcse.ardoco.tlr.textextraction.TextExtraction;
@@ -41,8 +42,10 @@ public class ArDoCoForSadSamTraceabilityLinkRecovery extends ArDoCoRunner {
         DataRepositoryHelper.putInputText(dataRepository, text);
 
         this.getArDoCo().addPipelineStep(TextPreprocessingAgent.get(additionalConfigs, dataRepository));
+
+        var architectureConfiguration = new ArchitectureConfiguration(inputArchitectureModel, architectureModelType);
         ArCoTLModelProviderAgent arCoTLModelProviderAgent = //
-                ArCoTLModelProviderAgent.get(inputArchitectureModel, architectureModelType, null, additionalConfigs, dataRepository);
+                ArCoTLModelProviderAgent.getArCoTLModelProviderAgent(dataRepository, additionalConfigs, architectureConfiguration, null);
         this.getArDoCo().addPipelineStep(arCoTLModelProviderAgent);
 
         this.getArDoCo().addPipelineStep(TextExtraction.get(additionalConfigs, dataRepository));

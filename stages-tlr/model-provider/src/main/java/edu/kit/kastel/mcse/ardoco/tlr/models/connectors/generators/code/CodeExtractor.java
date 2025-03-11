@@ -57,11 +57,6 @@ public abstract class CodeExtractor extends Extractor {
         writeOutCodeModel(codeModel, file);
     }
 
-    public CodeModel readInCodeModel() {
-        File codeModelFile = new File(this.getCodeModelFileString());
-        return readInCodeModel(codeModelFile);
-    }
-
     public static CodeModel readInCodeModel(File codeModelFile) {
         if (codeModelFile != null && codeModelFile.isFile()) {
             logger.info("Reading in existing code model.");

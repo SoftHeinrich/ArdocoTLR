@@ -2,10 +2,7 @@
 package edu.kit.kastel.mcse.ardoco.core.tests.eval;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -151,40 +148,17 @@ public enum CodeProject implements GoldStandardProject {
     }
 
     /**
-     * {@return path of the code directory}
-     */
-    public String getCodeLocation() {
-        return getTemporaryCodeLocation().getAbsolutePath();
-    }
-
-    /**
-     * {@return the directory of the code model}
-     */
-    public String getCodeModelDirectory() {
-        try {
-            loadCodeModelFromResourcesIfNeeded();
-            return getTemporaryCodeLocation().getAbsolutePath();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /**
-     * Loads the code from resources or from the code directoy cache
+     * Get Code Location (ACM File or Temporary Directory)
+     * 
+     * @param acmFile If true, the ACM file is loaded from resources
      *
-     * @throws IOException Can occur during file operations
      */
-    public void loadCodeModelFromResourcesIfNeeded() throws IOException {
-        if (ProjectHelper.ANALYZE_CODE_DIRECTLY.get())
-            return;
-
-        File temporaryCodeLocation = getTemporaryCodeLocation();
-        File codeModelFile = new File(temporaryCodeLocation + "/codeModel.acm");
-        try (InputStream is = getClass().getResourceAsStream(this.codeModelLocationInResources)) {
-            try (FileOutputStream fos = new FileOutputStream(codeModelFile)) {
-                is.transferTo(fos);
-            }
+    public File getCodeLocation(boolean acmFile) {
+        if (acmFile) {
+            return ProjectHelper.loadFileFromResources(this.codeModelLocationInResources);
         }
+
+        return getTemporaryCodeLocation();
     }
 
     /**
@@ -240,7 +214,7 @@ public enum CodeProject implements GoldStandardProject {
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
-        lines.remove(0);
+        lines.removeFirst();
         lines = lines.stream().filter(Predicate.not(String::isBlank)).toList();
         return lines;
     }

@@ -6,9 +6,10 @@ import java.util.SortedMap;
 
 import edu.kit.kastel.mcse.ardoco.core.api.models.ArchitectureModelType;
 import edu.kit.kastel.mcse.ardoco.core.execution.ArDoCo;
-import edu.kit.kastel.mcse.ardoco.tlr.codetraceability.SamCodeTraceabilityLinkRecovery;
 import edu.kit.kastel.mcse.ardoco.core.execution.runner.ArDoCoRunner;
+import edu.kit.kastel.mcse.ardoco.tlr.codetraceability.SamCodeTraceabilityLinkRecovery;
 import edu.kit.kastel.mcse.ardoco.tlr.models.agents.ArCoTLModelProviderAgent;
+import edu.kit.kastel.mcse.ardoco.tlr.models.agents.ArchitectureConfiguration;
 
 public class ArDoCoForSamCodeTraceabilityLinkRecovery extends ArDoCoRunner {
 
@@ -28,8 +29,11 @@ public class ArDoCoForSamCodeTraceabilityLinkRecovery extends ArDoCoRunner {
         ArDoCo arDoCo = this.getArDoCo();
         var dataRepository = arDoCo.getDataRepository();
 
-        ArCoTLModelProviderAgent arCoTLModelProviderAgent = ArCoTLModelProviderAgent.get(inputArchitectureModel, architectureModelType, inputCode,
-                additionalConfigs, dataRepository);
+        var codeConfiguration = ArCoTLModelProviderAgent.getCodeConfiguration(inputCode);
+        var architectureConfiguration = new ArchitectureConfiguration(inputArchitectureModel, architectureModelType);
+
+        ArCoTLModelProviderAgent arCoTLModelProviderAgent = ArCoTLModelProviderAgent.getArCoTLModelProviderAgent(dataRepository, additionalConfigs,
+                architectureConfiguration, codeConfiguration);
         arDoCo.addPipelineStep(arCoTLModelProviderAgent);
         arDoCo.addPipelineStep(SamCodeTraceabilityLinkRecovery.get(additionalConfigs, dataRepository));
     }

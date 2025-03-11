@@ -6,18 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
 
-import edu.kit.kastel.mcse.ardoco.core.api.models.ArchitectureModelType;
-import edu.kit.kastel.mcse.ardoco.core.api.models.arcotl.code.CodeItemRepository;
+import org.slf4j.LoggerFactory;
+
 import edu.kit.kastel.mcse.ardoco.core.data.DataRepository;
-import edu.kit.kastel.mcse.ardoco.tlr.models.connectors.generators.Extractor;
-import edu.kit.kastel.mcse.ardoco.tlr.models.connectors.generators.architecture.ArchitectureExtractor;
-import edu.kit.kastel.mcse.ardoco.tlr.models.connectors.generators.architecture.pcm.PcmExtractor;
-import edu.kit.kastel.mcse.ardoco.tlr.models.connectors.generators.architecture.uml.UmlExtractor;
-import edu.kit.kastel.mcse.ardoco.tlr.models.connectors.generators.code.AllLanguagesExtractor;
-import edu.kit.kastel.mcse.ardoco.tlr.models.connectors.generators.code.CodeExtractor;
-import edu.kit.kastel.mcse.ardoco.tlr.models.informants.ArCoTLModelProviderInformant;
 import edu.kit.kastel.mcse.ardoco.core.pipeline.agent.Informant;
 import edu.kit.kastel.mcse.ardoco.core.pipeline.agent.PipelineAgent;
+import edu.kit.kastel.mcse.ardoco.tlr.models.connectors.generators.Extractor;
+import edu.kit.kastel.mcse.ardoco.tlr.models.informants.ArCoTLModelProviderInformant;
 
 /**
  * Agent that provides information from models.
@@ -27,42 +22,43 @@ public class ArCoTLModelProviderAgent extends PipelineAgent {
     /**
      * Instantiates a new model provider agent.
      * The constructor takes a list of ModelConnectors that are executed and used to extract information from models.
+     * You can specify the extractors xor the code model file.
      *
-     * @param data       the DataRepository
-     * @param extractors the list of ModelConnectors that should be used
+     * @param data                      the DataRepository
+     * @param architectureConfiguration the architecture configuration
+     * @param codeConfiguration         the code configuration
      */
-    public ArCoTLModelProviderAgent(DataRepository data, List<Extractor> extractors) {
-        super(informants(data, extractors), ArCoTLModelProviderAgent.class.getSimpleName(), data);
+    public ArCoTLModelProviderAgent(DataRepository data, ArchitectureConfiguration architectureConfiguration, CodeConfiguration codeConfiguration) {
+        super(informants(data, architectureConfiguration, codeConfiguration), ArCoTLModelProviderAgent.class.getSimpleName(), data);
     }
 
-    private static List<? extends Informant> informants(DataRepository data, List<Extractor> extractors) {
-        return extractors.stream().map(e -> new ArCoTLModelProviderInformant(data, e)).toList();
+    private static List<? extends Informant> informants(DataRepository data, ArchitectureConfiguration architectureConfiguration,
+            CodeConfiguration codeConfiguration) {
+        List<Informant> informants = new ArrayList<>();
+        if (architectureConfiguration != null) {
+            informants.add(new ArCoTLModelProviderInformant(data, architectureConfiguration.extractor()));
+        }
+
+        if (codeConfiguration != null && codeConfiguration.type() == CodeConfiguration.CodeConfigurationType.ACM_FILE) {
+            informants.add(new ArCoTLModelProviderInformant(data, codeConfiguration.code()));
+        }
+
+        if (codeConfiguration != null && codeConfiguration.type() == CodeConfiguration.CodeConfigurationType.DIRECTORY) {
+            for (Extractor e : codeConfiguration.extractors()) {
+                informants.add(new ArCoTLModelProviderInformant(data, e));
+            }
+        }
+
+        return informants;
     }
 
-    public static ArCoTLModelProviderAgent get(File inputArchitectureModel, ArchitectureModelType architectureModelType, File inputCode,
-            SortedMap<String, String> additionalConfigs, DataRepository dataRepository) {
-
-        List<Extractor> extractors = new ArrayList<>();
-
-        if (inputArchitectureModel != null && architectureModelType != null) {
-            ArchitectureExtractor architectureExtractor = switch (architectureModelType) {
-            case PCM -> new PcmExtractor(inputArchitectureModel.getAbsolutePath());
-            case UML -> new UmlExtractor(inputArchitectureModel.getAbsolutePath());
-            };
-            extractors.add(architectureExtractor);
+    public static ArCoTLModelProviderAgent getArCoTLModelProviderAgent(DataRepository dataRepository, SortedMap<String, String> additionalConfigs,
+            ArchitectureConfiguration architectureConfiguration, CodeConfiguration codeConfiguration) {
+        if (architectureConfiguration == null && codeConfiguration == null) {
+            throw new IllegalArgumentException("At least one configuration must be provided");
         }
 
-        if (inputCode != null) {
-            CodeItemRepository codeItemRepository = new CodeItemRepository();
-            CodeExtractor codeExtractor = new AllLanguagesExtractor(codeItemRepository, inputCode.getAbsolutePath());
-            extractors.add(codeExtractor);
-        }
-
-        if (extractors.isEmpty()) {
-            throw new IllegalArgumentException("No model extractor was provided.");
-        }
-
-        ArCoTLModelProviderAgent agent = new ArCoTLModelProviderAgent(dataRepository, extractors);
+        var agent = new ArCoTLModelProviderAgent(dataRepository, architectureConfiguration, codeConfiguration);
         agent.applyConfiguration(additionalConfigs);
         return agent;
     }
@@ -70,5 +66,25 @@ public class ArCoTLModelProviderAgent extends PipelineAgent {
     @Override
     protected void delegateApplyConfigurationToInternalObjects(SortedMap<String, String> additionalConfiguration) {
         // empty
+    }
+
+    public static CodeConfiguration getCodeConfiguration(File inputCode) {
+        if (inputCode == null) {
+            throw new IllegalArgumentException("Code file must not be null");
+        }
+
+        if (inputCode.isFile()) {
+            return new CodeConfiguration(inputCode, CodeConfiguration.CodeConfigurationType.ACM_FILE);
+        }
+
+        // Legacy Support for only ACM_FILE in a directory
+        // TODO: Maybe delete in the future
+        if (inputCode.isDirectory() && new File(inputCode, "codeModel.acm").exists()) {
+            var logger = LoggerFactory.getLogger(ArCoTLModelProviderAgent.class);
+            logger.error("Legacy support for only ACM_FILE in a directory. Please use the ACM_FILE directly.");
+            return new CodeConfiguration(new File(inputCode, "codeModel.acm"), CodeConfiguration.CodeConfigurationType.ACM_FILE);
+        }
+
+        return new CodeConfiguration(inputCode, CodeConfiguration.CodeConfigurationType.DIRECTORY);
     }
 }
