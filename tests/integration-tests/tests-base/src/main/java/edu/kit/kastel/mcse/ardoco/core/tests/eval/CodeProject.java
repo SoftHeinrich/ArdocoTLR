@@ -126,6 +126,11 @@ public enum CodeProject implements GoldStandardProject {
         return this.name();
     }
 
+    public Project getCodeProject() {
+        return this.project;
+    }
+
+
     @Override
     public SortedSet<String> getResourceNames() {
         return new TreeSet<>(resourceNames);

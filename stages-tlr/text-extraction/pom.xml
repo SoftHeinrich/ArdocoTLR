@@ -51,6 +51,10 @@
       <artifactId>slf4j-simple</artifactId>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>org.eclipse.collections</groupId>
+          <artifactId>eclipse-collections-api</artifactId>
+      </dependency>
   </dependencies>
 
   <profiles>
